@@ -120,7 +120,7 @@ open class OAuthWebViewController: OAuthViewController, OAuthSwiftURLHandlerType
                 case .animator(let animator):
                     p.present(self, animator: animator)
                 case .segue(let segueIdentifier):
-                    p.performSegue(withIdentifier: NSStoryboardSegue.Identifier(stringLiteral: segueIdentifier), sender: self) // The segue must display self.view
+                    p.performSegue(withIdentifier: segueIdentifier, sender: self) // The segue must display self.view
                 }
             } else if let window = self.view.window {
                 window.makeKeyAndOrderFront(nil)

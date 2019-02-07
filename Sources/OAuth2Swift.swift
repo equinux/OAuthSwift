@@ -30,6 +30,8 @@ open class OAuth2Swift: OAuthSwift {
     var accessTokenUrl: String?
     var responseType: String
     var contentType: String?
+    // RFC7636 PKCE
+    var codeVerifier: String?
 
     // MARK: init
     public convenience init(consumerKey: String, consumerSecret: String, authorizeUrl: String, accessTokenUrl: String, responseType: String) {
@@ -181,6 +183,12 @@ open class OAuth2Swift: OAuthSwift {
         parameters["client_secret"] = self.consumerSecret
         parameters["code"] = code
         parameters["grant_type"] = "authorization_code"
+        
+        // PKCE - extra parameter
+        if let codeVerifier = self.codeVerifier {
+            parameters["code_verifier"] = codeVerifier
+        }
+        
         if let callbackURL = callbackURL {
             parameters["redirect_uri"] = callbackURL.absoluteString.safeStringByRemovingPercentEncoding
         }
@@ -336,6 +344,31 @@ open class OAuth2Swift: OAuthSwift {
             success: success,
             failure: failure
         )
+    }
+    
+    /// use RFC7636 PKCE credentials - convenience method
+    @discardableResult
+    open func authorize(withCallbackURL urlString: String, scope: String, state: String, codeChallenge: String, codeChallengeMethod: String = "S256", codeVerifier: String, parameters: Parameters = [:], headers: OAuthSwift.Headers? = nil, success: @escaping TokenSuccessHandler, failure: FailureHandler?) -> OAuthSwiftRequestHandle? {
+        guard let url = URL(string: urlString) else {
+            failure?(OAuthSwiftError.encodingError(urlString: urlString))
+            return nil
+        }
+        
+        return authorize(withCallbackURL: url, scope: scope, state: state, codeChallenge: codeChallenge, codeChallengeMethod: codeChallengeMethod, codeVerifier: codeVerifier, parameters: parameters, headers: headers, success: success, failure: failure)
+    }
+    
+    /// use RFC7636 PKCE credentials
+    @discardableResult
+    open func authorize(withCallbackURL callbackURL: URL?, scope: String, state: String, codeChallenge: String, codeChallengeMethod: String = "S256", codeVerifier: String, parameters: Parameters = [:], headers: OAuthSwift.Headers? = nil, success: @escaping TokenSuccessHandler, failure: FailureHandler?) -> OAuthSwiftRequestHandle? {
+        
+        // remember code_verifier
+        self.codeVerifier = codeVerifier
+        // PKCE - extra parameter
+        var pkceParameters = Parameters()
+        pkceParameters["code_challenge"] = codeChallenge
+        pkceParameters["code_challenge_method"] = codeChallengeMethod
+        
+        return authorize(withCallbackURL: callbackURL, scope: scope, state: state, parameters: parameters + pkceParameters, headers: headers, success: success, failure: failure)
     }
 
 }
