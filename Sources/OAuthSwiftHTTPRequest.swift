@@ -392,10 +392,16 @@ extension OAuthSwiftHTTPRequest {
 
             var queryStringParameters = OAuthSwift.Parameters()
             var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false )
-            if let queryItems = urlComponents?.queryItems {
-                for queryItem in queryItems {
-                    let value = queryItem.value?.safeStringByRemovingPercentEncoding ?? ""
-                    queryStringParameters.updateValue(value, forKey: queryItem.name)
+            if #available(macOS 10.10, *) {
+                if let queryItems = urlComponents?.queryItems {
+                    for queryItem in queryItems {
+                        let value = queryItem.value?.safeStringByRemovingPercentEncoding ?? ""
+                        queryStringParameters.updateValue(value, forKey: queryItem.name)
+                    }
+                }
+            } else {
+                for (name, value) in parseQueryItems(of: url) {
+                    queryStringParameters.updateValue(value, forKey: name)
                 }
             }
 
@@ -508,4 +514,26 @@ extension OAuthSwiftHTTPRequest {
         return s
     }
 
+}
+
+private extension OAuthSwiftHTTPRequest {
+    
+    static func parseQueryItems(of url: URL) -> [(String, String)] {
+        guard let query = url.query else { return [] }
+        
+        let keyValuePairs = query.components(separatedBy: "&")
+        return keyValuePairs.map {
+            (pair) -> (String, String) in
+            
+            guard let equalsIndex = pair.firstIndex(of: "=") else {
+                return (pair, "")
+            }
+            
+            let key = String(pair.prefix(upTo: equalsIndex)).safeStringByRemovingPercentEncoding
+            let rawValue = pair.suffix(from: pair.index(after: equalsIndex))
+            let value = rawValue.replacingOccurrences(of: "+", with: " ").safeStringByRemovingPercentEncoding
+            return (key, value)
+        }
+    }
+    
 }
