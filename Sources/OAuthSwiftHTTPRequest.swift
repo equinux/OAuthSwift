@@ -80,6 +80,7 @@ open class OAuthSwiftHTTPRequest: NSObject, OAuthSwiftRequestHandle {
             self.requestLock.lock()
             defer { self.requestLock.unlock() }
             if self.cancelRequested {
+                completion?(.failure(.cancelled))
                 return
             }
 
@@ -225,6 +226,7 @@ open class OAuthSwiftHTTPRequest: NSObject, OAuthSwiftRequestHandle {
 
     open class func makeRequest(config: Config) throws -> URLRequest {
         var request = config.urlRequest
+        OAuthSwift.log?.trace("URLRequest is created: \(request)")
         return try setupRequestForOAuth(request: &request,
                                         parameters: config.parameters,
                                         dataEncoding: config.dataEncoding,
@@ -246,6 +248,7 @@ open class OAuthSwiftHTTPRequest: NSObject, OAuthSwiftRequestHandle {
         for (key, value) in headers {
             request.setValue(value, forHTTPHeaderField: key)
         }
+        OAuthSwift.log?.trace("URLRequest is created: \(request)")
 
         return try setupRequestForOAuth(
             request: &request,
